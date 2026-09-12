@@ -480,6 +480,144 @@ class FirebaseService {
     }
   }
 
+  // ============ HORARIOS DE MANTENIMIENTO ============
+
+  Future<MaintenanceSchedule?> getMaintenanceSchedule(
+    String userId,
+    MaintenanceType type,
+  ) async {
+    try {
+      final doc = await _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('maintenanceSchedules')
+          .where('type', isEqualTo: type.toString().split('.').last)
+          .limit(1)
+          .get();
+
+      if (doc.docs.isEmpty) {
+        return null;
+      }
+
+      return MaintenanceSchedule.fromMap(doc.docs.first.data());
+    } catch (e) {
+      Logger.error('Error al obtener horario de mantenimiento: $e', tag: _logTag);
+      return null;
+    }
+  }
+
+  Future<void> setMaintenanceSchedule(String userId, MaintenanceSchedule schedule) async {
+    try {
+      await _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('maintenanceSchedules')
+          .doc(schedule.id)
+          .set(schedule.toMap());
+      Logger.log('✓ Horario de mantenimiento guardado: ${schedule.type.displayName}');
+    } catch (e) {
+      Logger.error('Error al guardar horario de mantenimiento: $e', tag: _logTag);
+      rethrow;
+    }
+  }
+
+  Future<List<MaintenanceSchedule>> getAllMaintenanceSchedules(String userId) async {
+    try {
+      final docs = await _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('maintenanceSchedules')
+          .get();
+
+      return docs.docs.map((doc) => MaintenanceSchedule.fromMap(doc.data())).toList();
+    } catch (e) {
+      Logger.error('Error al obtener horarios de mantenimiento: $e', tag: _logTag);
+      return [];
+    }
+  }
+
+  // ============ ALERTAS ============
+
+  Future<Map<String, dynamic>> getVehicleAlerts(String vehicleId, String userId) async {
+    try {
+      final vehicle = await getVehicle(vehicleId);
+      if (vehicle == null) return {};
+
+      final maintenances = await getVehicleMaintenances(vehicleId);
+      final schedules = await getAllMaintenanceSchedules(userId);
+
+      final alerts = <String, dynamic>{};
+
+      for (final schedule in schedules) {
+        final lastMaintenance =
+            maintenances.where((m) => m.type == schedule.type).fold<Maintenance?>(
+          null,
+          (prev, current) => prev == null || current.date.isAfter(prev.date) ? current : prev,
+        );
+
+        if (lastMaintenance == null && (schedule.recommendedIntervalKm != null || schedule.recommendedIntervalDays != null)) {
+          alerts[schedule.type.displayName] = {
+            'status': AlertStatus.warning,
+            'reason': 'Nunca ha sido realizado',
+            'daysOverdue': null,
+          };
+        } else if (lastMaintenance != null) {
+          final daysSinceLast = DateTime.now().difference(lastMaintenance.date).inDays;
+          final kmSinceLast = vehicle.currentKm - lastMaintenance.km;
+
+          bool isDaysOverdue = false;
+          bool isKmOverdue = false;
+
+          if (schedule.recommendedIntervalDays != null) {
+            isDaysOverdue = daysSinceLast > schedule.recommendedIntervalDays!;
+          }
+
+          if (schedule.recommendedIntervalKm != null) {
+            isKmOverdue = kmSinceLast > schedule.recommendedIntervalKm!;
+          }
+
+          if (isDaysOverdue || isKmOverdue) {
+            alerts[schedule.type.displayName] = {
+              'status': AlertStatus.overdue,
+              'reason': isDaysOverdue ? '${daysSinceLast} días' : '${kmSinceLast} km',
+              'daysOverdue': daysSinceLast,
+            };
+          } else {
+            final remainingDays =
+                schedule.recommendedIntervalDays != null ? schedule.recommendedIntervalDays! - daysSinceLast : null;
+            final remainingKm =
+                schedule.recommendedIntervalKm != null ? schedule.recommendedIntervalKm! - kmSinceLast : null;
+
+            bool isWarning = false;
+            String? reason;
+
+            if (remainingDays != null && remainingDays <= 30) {
+              isWarning = true;
+              reason = 'En ${remainingDays} días';
+            }
+            if (remainingKm != null && remainingKm <= 1000) {
+              isWarning = true;
+              reason = reason != null ? '$reason / ${remainingKm} km' : 'En ${remainingKm} km';
+            }
+
+            if (isWarning) {
+              alerts[schedule.type.displayName] = {
+                'status': AlertStatus.warning,
+                'reason': reason,
+                'daysOverdue': null,
+              };
+            }
+          }
+        }
+      }
+
+      return alerts;
+    } catch (e) {
+      Logger.error('Error al calcular alertas del vehículo: $e', tag: _logTag);
+      return {};
+    }
+  }
+
   // ============ FOTOS ============
 
   Future<String?> uploadVehiclePhoto(String userId, String vehicleId, File photoFile) async {

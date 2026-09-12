@@ -5,6 +5,7 @@ import '../models/models.dart';
 import 'vehicles/vehicles_list_screen.dart';
 import 'vehicles/add_vehicle_screen.dart';
 import 'profile_screen.dart';
+import 'maintenance/maintenance_schedule_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -293,6 +294,15 @@ class _HomeScreenState extends State<HomeScreen> {
                   label: const Text('Agregar Vehículo'),
                 ),
               ),
+              const SizedBox(height: 12),
+              SizedBox(
+                height: 48,
+                child: ElevatedButton.icon(
+                  onPressed: _navigateToSchedules,
+                  icon: const Icon(Icons.alarm),
+                  label: const Text('Configurar Alertas'),
+                ),
+              ),
               const SizedBox(height: 32),
               GestureDetector(
                 onTap: _userData != null ? _editProfile : null,
@@ -426,6 +436,14 @@ class _HomeScreenState extends State<HomeScreen> {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => const AddVehicleScreen(),
+      ),
+    );
+  }
+
+  void _navigateToSchedules() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const MaintenanceScheduleScreen(),
       ),
     );
   }

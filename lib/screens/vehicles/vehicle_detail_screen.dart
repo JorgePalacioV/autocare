@@ -69,6 +69,8 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
             const SizedBox(height: 24),
             _buildStatsSection(),
             const SizedBox(height: 24),
+            _buildAlertsSection(),
+            const SizedBox(height: 24),
             _buildMaintenanceSection(),
           ],
         ),
@@ -237,6 +239,130 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
             style: TextStyle(
               fontSize: 11,
               color: Colors.grey[600],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAlertsSection() {
+    final userId = _firebaseService.currentUserId;
+    if (userId == null) {
+      return const SizedBox.shrink();
+    }
+
+    return FutureBuilder<Map<String, dynamic>>(
+      future: _firebaseService.getVehicleAlerts(_currentVehicle.id, userId),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        final alerts = snapshot.data ?? {};
+
+        if (alerts.isEmpty) {
+          return Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.green.withAlpha(13),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.green.withAlpha(50)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.check_circle, color: Colors.green, size: 20),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Todo al día',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'No hay mantenimientos vencidos',
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Alertas de Mantenimiento',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 16),
+            ...alerts.entries.map((entry) {
+              final type = entry.key;
+              final data = entry.value as Map<String, dynamic>;
+              final status = data['status'] as AlertStatus;
+              final reason = data['reason'] as String?;
+
+              return _buildAlertCard(status, type, reason);
+            }),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildAlertCard(AlertStatus status, String type, String? reason) {
+    final colors = {
+      AlertStatus.ok: (Color(0xFF34A853), Color(0xFF34A853).withAlpha(13)),
+      AlertStatus.warning: (Color(0xFFFBBC04), Color(0xFFFBBC04).withAlpha(13)),
+      AlertStatus.overdue: (Colors.red, Colors.red.withAlpha(13)),
+    };
+
+    final (borderColor, bgColor) = colors[status] ?? (Colors.grey, Colors.grey.withAlpha(13));
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: borderColor.withAlpha(100)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Text(
+            status.emoji,
+            style: const TextStyle(fontSize: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  type,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+                if (reason != null)
+                  Text(
+                    reason,
+                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  ),
+              ],
+            ),
+          ),
+          Text(
+            status.label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: borderColor,
             ),
           ),
         ],
