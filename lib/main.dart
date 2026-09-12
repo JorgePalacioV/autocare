@@ -3,11 +3,14 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:firebase_core/firebase_core.dart' hide FirebaseService;
 import 'firebase_options.dart';
 import 'services/firebase_service.dart';
+import 'services/theme_service.dart';
+import 'providers/theme_provider.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/register_screen.dart';
 import 'screens/auth/forgot_password_screen.dart';
 import 'screens/home_screen.dart';
 import 'l10n/app_localizations_delegate.dart';
+import 'themes/app_themes.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -15,90 +18,89 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
   await FirebaseService().connectToEmulators();
-  runApp(const MyApp());
+  final themeService = ThemeService();
+  await themeService.init();
+  runApp(MyApp(themeService: themeService));
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class MyApp extends StatefulWidget {
+  final ThemeService themeService;
+
+  const MyApp({super.key, required this.themeService});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  late ThemeProvider _themeProvider;
+
+  @override
+  void initState() {
+    super.initState();
+    _themeProvider = ThemeProvider(widget.themeService);
+  }
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'AutoCare',
-      theme: ThemeData(
-        primaryColor: const Color(0xFF1A73E8),
-        primarySwatch: Colors.blue,
-        useMaterial3: true,
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFF1A73E8),
-          elevation: 0,
-          centerTitle: true,
-        ),
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF1A73E8),
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            textStyle: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-        textButtonTheme: TextButtonThemeData(
-          style: TextButton.styleFrom(
-            foregroundColor: const Color(0xFF1A73E8),
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            textStyle: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-      ),
-      localizationsDelegates: const [
-        AppLocalizationsDelegate(),
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-      ],
-      supportedLocales: const [
-        Locale('es'),
-        Locale('en'),
-        Locale('pt'),
-        Locale('fr'),
-      ],
-      locale: const Locale('es'),
-      home: const AuthWrapper(),
-      routes: {
-        '/login': (context) => const LoginScreen(),
-        '/register': (context) => const RegisterScreen(),
-        '/forgot-password': (context) => const ForgotPasswordScreen(),
-        '/home': (context) => const HomeScreen(),
+    return ListenableBuilder(
+      listenable: _themeProvider,
+      builder: (context, child) {
+        return MaterialApp(
+          title: 'AutoCare',
+          theme: AppThemes.lightTheme,
+          darkTheme: AppThemes.darkTheme,
+          themeMode: _themeProvider.currentTheme == ThemeMode.system
+              ? ThemeMode.system
+              : (_themeProvider.currentTheme == ThemeMode.dark
+                  ? ThemeMode.dark
+                  : ThemeMode.light),
+          localizationsDelegates: const [
+            AppLocalizationsDelegate(),
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+          ],
+          supportedLocales: const [
+            Locale('es'),
+            Locale('en'),
+            Locale('pt'),
+            Locale('fr'),
+          ],
+          locale: const Locale('es'),
+          home: AuthWrapper(themeProvider: _themeProvider),
+          routes: {
+            '/login': (context) => const LoginScreen(),
+            '/register': (context) => const RegisterScreen(),
+            '/forgot-password': (context) => const ForgotPasswordScreen(),
+            '/home': (context) => const HomeScreen(),
+          },
+        );
       },
     );
   }
 }
 
 class AuthWrapper extends StatelessWidget {
-  const AuthWrapper({Key? key}) : super(key: key);
+  final ThemeProvider themeProvider;
+
+  const AuthWrapper({Key? key, required this.themeProvider}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     final firebaseService = FirebaseService();
 
     if (firebaseService.isAuthenticated) {
-      return const HomeScreen();
+      return HomeScreen(themeProvider: themeProvider);
     } else {
-      return const IntroScreen();
+      return IntroScreen(themeProvider: themeProvider);
     }
   }
 }
 
 class IntroScreen extends StatefulWidget {
-  const IntroScreen({Key? key}) : super(key: key);
+  final ThemeProvider themeProvider;
+
+  const IntroScreen({Key? key, required this.themeProvider}) : super(key: key);
 
   @override
   State<IntroScreen> createState() => _IntroScreenState();

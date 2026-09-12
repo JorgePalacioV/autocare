@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../services/firebase_service.dart';
 import '../services/logger.dart';
+import '../services/theme_service.dart';
+import '../providers/theme_provider.dart';
 import '../models/models.dart';
 import 'vehicles/vehicles_list_screen.dart';
 import 'vehicles/add_vehicle_screen.dart';
@@ -9,7 +11,9 @@ import 'maintenance/maintenance_schedule_screen.dart';
 import 'reports/reports_screen.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({Key? key}) : super(key: key);
+  final ThemeProvider? themeProvider;
+
+  const HomeScreen({Key? key, this.themeProvider}) : super(key: key);
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -107,6 +111,14 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           ),
+          if (widget.themeProvider != null)
+            IconButton(
+              icon: widget.themeProvider!.isDarkMode
+                  ? const Icon(Icons.light_mode)
+                  : const Icon(Icons.dark_mode),
+              onPressed: widget.themeProvider!.toggleTheme,
+              tooltip: 'Cambiar Tema',
+            ),
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: _handleLogout,
