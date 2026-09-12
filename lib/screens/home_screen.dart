@@ -4,6 +4,7 @@ import '../services/logger.dart';
 import '../models/models.dart';
 import 'vehicles/vehicles_list_screen.dart';
 import 'vehicles/add_vehicle_screen.dart';
+import 'profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -88,6 +89,8 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
+    final userId = _firebaseService.currentUserId;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('AutoCare'),
@@ -115,7 +118,6 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Card de Bienvenida
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
@@ -140,7 +142,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     const SizedBox(height: 8),
                     const Text(
-                      'Gestiona el mantenimiento de tus vehículos',
+                      'Dashboard de Mantenimiento',
                       style: TextStyle(
                         fontSize: 14,
                         color: Colors.white,
@@ -151,61 +153,138 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               const SizedBox(height: 32),
-
-              // Estadísticas
-              const Text(
+              Text(
                 'Resumen',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF202124),
-                ),
+                style: Theme.of(context).textTheme.titleLarge,
               ),
               const SizedBox(height: 16),
+              if (userId != null)
+                FutureBuilder<Map<String, dynamic>>(
+                  future: _firebaseService.getDashboardStats(userId),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
 
-              // Stats Cards (próximamente con datos reales)
-              Row(
-                children: [
-                  Expanded(
-                    child: StreamBuilder<List<Vehicle>>(
-                      stream: _firebaseService.getUserVehiclesStream(
-                        _firebaseService.currentUserId!,
-                      ),
-                      builder: (context, snapshot) {
-                        final count = snapshot.data?.length ?? 0;
-                        return _buildStatCard(
-                          icon: Icons.directions_car,
-                          label: 'Vehículos',
-                          value: '$count',
-                          onTap: () => _navigateToVehicles(),
-                        );
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _buildStatCard(
-                      icon: Icons.build_circle_outlined,
-                      label: 'Mantenimientos',
-                      value: '0',
-                      onTap: () => Logger.info('Navegar a mantenimientos', tag: '[HomeScreen]'),
-                    ),
-                  ),
-                ],
-              ),
+                    if (snapshot.hasError) {
+                      return Center(child: Text('Error: ${snapshot.error}'));
+                    }
+
+                    final stats = snapshot.data ?? {};
+                    final totalVehicles = stats['totalVehicles'] as int? ?? 0;
+                    final totalMaintenances = stats['totalMaintenances'] as int? ?? 0;
+                    final totalCost = stats['totalCost'] as double? ?? 0.0;
+                    final averageCost = stats['averageCostPerMaintenance'] as double? ?? 0.0;
+                    final daysLastMaintenance = stats['daysLastMaintenance'] as int?;
+
+                    return Column(
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildStatCard(
+                                icon: Icons.directions_car,
+                                label: 'Vehículos',
+                                value: '$totalVehicles',
+                                onTap: () => _navigateToVehicles(),
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: _buildStatCard(
+                                icon: Icons.build_circle_outlined,
+                                label: 'Mantenimientos',
+                                value: '$totalMaintenances',
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildStatCard(
+                                icon: Icons.attach_money,
+                                label: 'Gasto Total',
+                                value: '\$${totalCost.toStringAsFixed(0)}',
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: _buildStatCard(
+                                icon: Icons.trending_down,
+                                label: 'Promedio',
+                                value: '\$${averageCost.toStringAsFixed(0)}',
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildStatCard(
+                                icon: Icons.calendar_today,
+                                label: 'Último Mtto',
+                                value: daysLastMaintenance != null ? '${daysLastMaintenance}d' : '-',
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF1A73E8).withAlpha(13),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: const Color(0xFF1A73E8).withAlpha(50),
+                                  ),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Icon(Icons.info, size: 20, color: Color(0xFF1A73E8)),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      '${(totalMaintenances / (totalVehicles > 0 ? totalVehicles : 1)).toStringAsFixed(1)}',
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'Promedio/Auto',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: Colors.grey[600],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    );
+                  },
+                ),
               const SizedBox(height: 32),
-
-              // Acciones principales
-              const Text(
+              Text(
                 'Acciones Rápidas',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF202124),
-                ),
+                style: Theme.of(context).textTheme.titleLarge,
               ),
               const SizedBox(height: 16),
-
+              SizedBox(
+                height: 48,
+                child: ElevatedButton.icon(
+                  onPressed: _navigateToVehicles,
+                  icon: const Icon(Icons.directions_car),
+                  label: const Text('Ver Vehículos'),
+                ),
+              ),
+              const SizedBox(height: 12),
               SizedBox(
                 height: 48,
                 child: ElevatedButton.icon(
@@ -214,55 +293,52 @@ class _HomeScreenState extends State<HomeScreen> {
                   label: const Text('Agregar Vehículo'),
                 ),
               ),
-              const SizedBox(height: 12),
-
-              SizedBox(
-                height: 48,
-                child: OutlinedButton.icon(
-                  onPressed: () => Logger.info('Registrar mantenimiento', tag: '[HomeScreen]'),
-                  icon: const Icon(Icons.build_circle),
-                  label: const Text('Registrar Mantenimiento'),
-                ),
-              ),
               const SizedBox(height: 32),
-
-              // Información del usuario
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF1A73E8).withAlpha(13),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: const Color(0xFF1A73E8).withAlpha(50),
+              GestureDetector(
+                onTap: _userData != null ? _editProfile : null,
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1A73E8).withAlpha(13),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: const Color(0xFF1A73E8).withAlpha(50),
+                    ),
                   ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.info_outline, size: 20),
-                        const SizedBox(width: 12),
-                        const Text(
-                          'Información de Perfil',
-                          style: TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    _buildInfoRow('Nombre', _userData?.name ?? 'N/A'),
-                    const SizedBox(height: 8),
-                    _buildInfoRow('Email', _userData?.email ?? 'N/A'),
-                    if (_userData?.phone != null) ...[
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.info_outline, size: 20),
+                              const SizedBox(width: 12),
+                              const Text(
+                                'Información de Perfil',
+                                style: TextStyle(fontWeight: FontWeight.w600),
+                              ),
+                            ],
+                          ),
+                          const Icon(Icons.edit, size: 18),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      _buildInfoRow('Nombre', _userData?.name ?? 'N/A'),
                       const SizedBox(height: 8),
-                      _buildInfoRow('Teléfono', _userData!.phone!),
+                      _buildInfoRow('Email', _userData?.email ?? 'N/A'),
+                      if (_userData?.phone != null) ...[
+                        const SizedBox(height: 8),
+                        _buildInfoRow('Teléfono', _userData!.phone!),
+                      ],
+                      const SizedBox(height: 8),
+                      _buildInfoRow(
+                        'Miembro desde',
+                        '${_userData?.createdAt.day}/${_userData?.createdAt.month}/${_userData?.createdAt.year}',
+                      ),
                     ],
-                    const SizedBox(height: 8),
-                    _buildInfoRow(
-                      'Miembro desde',
-                      '${_userData?.createdAt.day}/${_userData?.createdAt.month}/${_userData?.createdAt.year}',
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ],
@@ -276,36 +352,37 @@ class _HomeScreenState extends State<HomeScreen> {
     required IconData icon,
     required String label,
     required String value,
-    required VoidCallback onTap,
+    VoidCallback? onTap,
   }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: const Color(0xFF1A73E8).withAlpha(13),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(8),
           border: Border.all(
             color: const Color(0xFF1A73E8).withAlpha(50),
           ),
         ),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, size: 32, color: const Color(0xFF1A73E8)),
-            const SizedBox(height: 8),
+            Icon(icon, size: 20, color: const Color(0xFF1A73E8)),
+            const SizedBox(height: 6),
             Text(
               value,
               style: const TextStyle(
-                fontSize: 24,
+                fontSize: 16,
                 fontWeight: FontWeight.w700,
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 2),
             Text(
               label,
-              style: const TextStyle(
-                fontSize: 12,
-                color: Color(0xFF5F6368),
+              style: TextStyle(
+                fontSize: 11,
+                color: Colors.grey[600],
               ),
             ),
           ],
@@ -351,5 +428,17 @@ class _HomeScreenState extends State<HomeScreen> {
         builder: (context) => const AddVehicleScreen(),
       ),
     );
+  }
+
+  void _editProfile() {
+    if (_userData != null) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => ProfileScreen(user: _userData!),
+        ),
+      ).then((_) {
+        _loadUserData();
+      });
+    }
   }
 }

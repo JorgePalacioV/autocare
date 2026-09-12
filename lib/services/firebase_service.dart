@@ -424,6 +424,62 @@ class FirebaseService {
     }
   }
 
+  Future<Map<String, dynamic>> getDashboardStats(String userId) async {
+    try {
+      Logger.log('Calculando estadísticas del dashboard para: $userId');
+
+      final vehicles = await getUserVehicles(userId);
+      final maintenances = await getUserMaintenances(userId, limit: 500);
+
+      double totalCost = 0;
+      int totalVehicles = vehicles.length;
+      int totalMaintenances = maintenances.length;
+      DateTime? lastMaintenance;
+
+      Map<String, int> maintenanceByType = {};
+      Map<String, double> costByVehicle = {};
+
+      for (final m in maintenances) {
+        totalCost += m.cost;
+        maintenanceByType[m.type.displayName] = (maintenanceByType[m.type.displayName] ?? 0) + 1;
+        costByVehicle[m.vehicleId] = (costByVehicle[m.vehicleId] ?? 0) + m.cost;
+
+        if (lastMaintenance == null || m.date.isAfter(lastMaintenance)) {
+          lastMaintenance = m.date;
+        }
+      }
+
+      String? mostExpensiveVehicleId;
+      double maxCost = 0;
+      costByVehicle.forEach((vehicleId, cost) {
+        if (cost > maxCost) {
+          maxCost = cost;
+          mostExpensiveVehicleId = vehicleId;
+        }
+      });
+
+      final stats = {
+        'totalVehicles': totalVehicles,
+        'totalMaintenances': totalMaintenances,
+        'totalCost': totalCost,
+        'averageCostPerMaintenance': totalMaintenances > 0 ? totalCost / totalMaintenances : 0.0,
+        'lastMaintenanceDate': lastMaintenance,
+        'daysLastMaintenance': lastMaintenance != null
+            ? DateTime.now().difference(lastMaintenance).inDays
+            : null,
+        'maintenanceByType': maintenanceByType,
+        'mostExpensiveVehicleId': mostExpensiveVehicleId,
+        'mostExpensiveVehicleCost': maxCost,
+      };
+
+      Logger.log('✓ Estadísticas del dashboard calculadas');
+      return stats;
+    } catch (e) {
+      Logger.error('✗ Error al calcular estadísticas del dashboard: $e', tag: _logTag);
+      rethrow;
+    }
+  }
+
   // ============ FOTOS ============
 
   Future<String?> uploadVehiclePhoto(String userId, String vehicleId, File photoFile) async {
