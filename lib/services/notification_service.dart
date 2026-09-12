@@ -33,7 +33,9 @@ class NotificationService {
 
       // Obtener token FCM
       final token = await _firebaseMessaging.getToken();
-      Logger.info('FCM Token: $token', tag: '[NotificationService]');
+      if (token != null) {
+        Logger.info('FCM Token obtenido exitosamente', tag: '[NotificationService]');
+      }
 
       // Inicializar notificaciones locales
       await _initLocalNotifications();
