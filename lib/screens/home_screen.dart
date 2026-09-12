@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../services/firebase_service.dart';
 import '../services/logger.dart';
 import '../models/models.dart';
+import 'vehicles/vehicles_list_screen.dart';
+import 'vehicles/add_vehicle_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -165,11 +167,19 @@ class _HomeScreenState extends State<HomeScreen> {
               Row(
                 children: [
                   Expanded(
-                    child: _buildStatCard(
-                      icon: Icons.directions_car,
-                      label: 'Vehículos',
-                      value: '0',
-                      onTap: () => Logger.info('Navegar a vehículos', tag: '[HomeScreen]'),
+                    child: StreamBuilder<List<Vehicle>>(
+                      stream: _firebaseService.getUserVehiclesStream(
+                        _firebaseService.currentUserId!,
+                      ),
+                      builder: (context, snapshot) {
+                        final count = snapshot.data?.length ?? 0;
+                        return _buildStatCard(
+                          icon: Icons.directions_car,
+                          label: 'Vehículos',
+                          value: '$count',
+                          onTap: () => _navigateToVehicles(),
+                        );
+                      },
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -199,7 +209,7 @@ class _HomeScreenState extends State<HomeScreen> {
               SizedBox(
                 height: 48,
                 child: ElevatedButton.icon(
-                  onPressed: () => Logger.info('Agregar vehículo', tag: '[HomeScreen]'),
+                  onPressed: _addVehicle,
                   icon: const Icon(Icons.add),
                   label: const Text('Agregar Vehículo'),
                 ),
@@ -324,6 +334,22 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  void _navigateToVehicles() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const VehiclesListScreen(),
+      ),
+    );
+  }
+
+  void _addVehicle() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const AddVehicleScreen(),
+      ),
     );
   }
 }

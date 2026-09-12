@@ -1,0 +1,259 @@
+import 'package:flutter/material.dart';
+import '../../models/models.dart';
+import '../../services/firebase_service.dart';
+import 'add_vehicle_screen.dart';
+
+class VehicleDetailScreen extends StatefulWidget {
+  final Vehicle vehicle;
+
+  const VehicleDetailScreen({
+    Key? key,
+    required this.vehicle,
+  }) : super(key: key);
+
+  @override
+  State<VehicleDetailScreen> createState() => _VehicleDetailScreenState();
+}
+
+class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
+  final _firebaseService = FirebaseService();
+  late Vehicle _currentVehicle;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentVehicle = widget.vehicle;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('${_currentVehicle.brand} ${_currentVehicle.model}'),
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.edit),
+            onPressed: _editVehicle,
+          ),
+        ],
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildVehicleCard(),
+            const SizedBox(height: 24),
+            _buildMaintenanceSection(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildVehicleCard() {
+    return Card(
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Información General',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 20),
+            _buildInfoRow('Marca', '${_currentVehicle.brand} ${_currentVehicle.model}'),
+            const Divider(),
+            _buildInfoRow('Placa', _currentVehicle.plate),
+            const Divider(),
+            _buildInfoRow('Año', '${_currentVehicle.year}'),
+            const Divider(),
+            _buildInfoRow('Kilómetros', '${_currentVehicle.currentKm} km'),
+            const Divider(),
+            _buildInfoRow(
+              'Agregado',
+              _formatDate(_currentVehicle.createdAt),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Colors.grey[600],
+                ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              textAlign: TextAlign.end,
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    fontWeight: FontWeight.w500,
+                  ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMaintenanceSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Mantenimientos',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            TextButton.icon(
+              onPressed: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Feature en desarrollo: Registrar mantenimiento'),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.add),
+              label: const Text('Agregar'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        StreamBuilder<List<Maintenance>>(
+          stream: _firebaseService.getVehicleMaintenancesStream(
+            _currentVehicle.id,
+          ),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            if (snapshot.hasError) {
+              return Center(child: Text('Error: ${snapshot.error}'));
+            }
+
+            final maintenances = snapshot.data ?? [];
+
+            if (maintenances.isEmpty) {
+              return Center(
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.build,
+                      size: 48,
+                      color: Colors.grey[400],
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Sin mantenimientos registrados',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Colors.grey[600],
+                          ),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            return ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: maintenances.length,
+              itemBuilder: (context, index) {
+                final maintenance = maintenances[index];
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  child: ListTile(
+                    leading: Icon(
+                      _getMaintenanceIcon(maintenance.type),
+                      color: Colors.blue,
+                    ),
+                    title: Text(maintenance.type.displayName),
+                    subtitle: Text(
+                      '${_formatDate(maintenance.date)} • ${maintenance.km} km',
+                    ),
+                    trailing: Text(
+                      '\$${maintenance.cost.toStringAsFixed(2)}',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: Colors.blue,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  IconData _getMaintenanceIcon(MaintenanceType type) {
+    switch (type) {
+      case MaintenanceType.oil:
+        return Icons.opacity;
+      case MaintenanceType.filter:
+        return Icons.filter_alt;
+      case MaintenanceType.tires:
+        return Icons.tire_repair;
+      case MaintenanceType.inspection:
+        return Icons.checklist;
+      case MaintenanceType.brakes:
+        return Icons.stop_circle;
+      case MaintenanceType.battery:
+        return Icons.battery_full;
+      case MaintenanceType.transmission:
+        return Icons.settings;
+      case MaintenanceType.suspension:
+        return Icons.auto_fix_high;
+      case MaintenanceType.electrical:
+        return Icons.electrical_services;
+      case MaintenanceType.bodywork:
+        return Icons.handyman;
+      case MaintenanceType.other:
+        return Icons.build;
+    }
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.day}/${date.month}/${date.year}';
+  }
+
+  void _editVehicle() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => AddVehicleScreen(vehicle: _currentVehicle),
+      ),
+    ).then((_) {
+      setState(() {
+        _refreshVehicleData();
+      });
+    });
+  }
+
+  void _refreshVehicleData() async {
+    final updated = await _firebaseService.getVehicle(_currentVehicle.id);
+    if (updated != null) {
+      setState(() {
+        _currentVehicle = updated;
+      });
+    }
+  }
+}
