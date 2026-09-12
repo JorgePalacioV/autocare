@@ -729,6 +729,48 @@ class FirebaseService {
     }
   }
 
+  // ============ FOTOS DE CONDUCTORES ============
+
+  Future<String?> uploadDriverPhoto(String userId, File photoFile) async {
+    try {
+      Logger.log('Subiendo foto del conductor');
+      final fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final ref = _storage.ref().child('drivers/$userId/profile/$fileName');
+
+      await ref.putFile(photoFile).timeout(const Duration(seconds: 10));
+
+      final url = await ref.getDownloadURL();
+      Logger.log('✓ Foto del conductor subida: $url');
+      return url;
+    } on TimeoutException {
+      Logger.warning('Upload de foto cancelado por timeout');
+      return null;
+    } catch (e) {
+      Logger.error('✗ Error al subir foto del conductor: $e', tag: _logTag);
+      return null;
+    }
+  }
+
+  Future<String?> uploadLicensePhoto(String userId, File photoFile) async {
+    try {
+      Logger.log('Subiendo foto de licencia');
+      final fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final ref = _storage.ref().child('drivers/$userId/license/$fileName');
+
+      await ref.putFile(photoFile).timeout(const Duration(seconds: 10));
+
+      final url = await ref.getDownloadURL();
+      Logger.log('✓ Foto de licencia subida: $url');
+      return url;
+    } on TimeoutException {
+      Logger.warning('Upload de foto cancelado por timeout');
+      return null;
+    } catch (e) {
+      Logger.error('✗ Error al subir foto de licencia: $e', tag: _logTag);
+      return null;
+    }
+  }
+
   // ============ UTILIDADES ============
 
   String generateId() => const Uuid().v4();

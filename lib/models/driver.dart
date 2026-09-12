@@ -7,6 +7,7 @@ class Driver {
   final String? licenseNumber;
   final DateTime? licenseExpiry;
   final String? photoUrl;
+  final String? licensePhotoUrl;
   final DateTime createdAt;
   final DateTime? updatedAt;
 
@@ -19,6 +20,7 @@ class Driver {
     this.licenseNumber,
     this.licenseExpiry,
     this.photoUrl,
+    this.licensePhotoUrl,
     required this.createdAt,
     this.updatedAt,
   });
@@ -45,6 +47,7 @@ class Driver {
     String? licenseNumber,
     DateTime? licenseExpiry,
     String? photoUrl,
+    String? licensePhotoUrl,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -57,6 +60,7 @@ class Driver {
       licenseNumber: licenseNumber ?? this.licenseNumber,
       licenseExpiry: licenseExpiry ?? this.licenseExpiry,
       photoUrl: photoUrl ?? this.photoUrl,
+      licensePhotoUrl: licensePhotoUrl ?? this.licensePhotoUrl,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt ?? DateTime.now(),
     );
@@ -72,6 +76,7 @@ class Driver {
       'licenseNumber': licenseNumber,
       'licenseExpiry': licenseExpiry?.toIso8601String(),
       'photoUrl': photoUrl,
+      'licensePhotoUrl': licensePhotoUrl,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': (updatedAt ?? DateTime.now()).toIso8601String(),
     };
@@ -87,6 +92,7 @@ class Driver {
       licenseNumber: map['licenseNumber'],
       licenseExpiry: map['licenseExpiry'] != null ? DateTime.parse(map['licenseExpiry']) : null,
       photoUrl: map['photoUrl'],
+      licensePhotoUrl: map['licensePhotoUrl'],
       createdAt: DateTime.parse(map['createdAt'] ?? DateTime.now().toIso8601String()),
       updatedAt: map['updatedAt'] != null ? DateTime.parse(map['updatedAt']) : null,
     );

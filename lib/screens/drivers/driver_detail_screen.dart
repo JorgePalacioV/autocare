@@ -33,6 +33,22 @@ class DriverDetailScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (driver.photoUrl != null && driver.photoUrl!.isNotEmpty)
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.network(
+                  driver.photoUrl!,
+                  height: 200,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return _buildPhotoPlaceholder('Foto del Conductor');
+                  },
+                ),
+              )
+            else
+              _buildPhotoPlaceholder('Foto del Conductor'),
+            const SizedBox(height: 24),
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -101,7 +117,7 @@ class DriverDetailScreen extends StatelessWidget {
             ],
             const SizedBox(height: 24),
             Text(
-              'Licencia de Conducir',
+              'Licencia de Conducción',
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 16),
@@ -159,6 +175,56 @@ class DriverDetailScreen extends StatelessWidget {
               ),
             ] else
               _buildInfoRow('Vencimiento', 'No especificado'),
+            const SizedBox(height: 24),
+            Text(
+              'Foto de la Licencia',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 16),
+            if (driver.licensePhotoUrl != null && driver.licensePhotoUrl!.isNotEmpty)
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.network(
+                  driver.licensePhotoUrl!,
+                  height: 180,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return _buildPhotoPlaceholder('Foto de Licencia');
+                  },
+                ),
+              )
+            else
+              _buildPhotoPlaceholder('Foto de Licencia'),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPhotoPlaceholder(String label) {
+    return Container(
+      height: 180,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.grey[200],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[300]!),
+      ),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              label.contains('Licencia') ? Icons.document_scanner : Icons.image_not_supported,
+              size: 48,
+              color: Colors.grey[600],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '$label no disponible',
+              style: TextStyle(color: Colors.grey[600]),
+            ),
           ],
         ),
       ),

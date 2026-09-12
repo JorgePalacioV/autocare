@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../models/models.dart';
 import '../../services/firebase_service.dart';
 import '../../services/logger.dart';
@@ -15,6 +17,7 @@ class AddDriverScreen extends StatefulWidget {
 class _AddDriverScreenState extends State<AddDriverScreen> {
   final _formKey = GlobalKey<FormState>();
   final _firebaseService = FirebaseService();
+  final _imagePicker = ImagePicker();
   bool _isLoading = false;
 
   late TextEditingController _nameController;
@@ -22,6 +25,8 @@ class _AddDriverScreenState extends State<AddDriverScreen> {
   late TextEditingController _emailController;
   late TextEditingController _licenseNumberController;
   DateTime? _licenseExpiry;
+  File? _driverPhoto;
+  File? _licensePhoto;
 
   @override
   void initState() {
@@ -54,6 +59,28 @@ class _AddDriverScreenState extends State<AddDriverScreen> {
     }
   }
 
+  Future<void> _pickDriverPhoto() async {
+    try {
+      final pickedFile = await _imagePicker.pickImage(source: ImageSource.gallery);
+      if (pickedFile != null) {
+        setState(() => _driverPhoto = File(pickedFile.path));
+      }
+    } catch (e) {
+      Logger.error('Error picking photo: $e');
+    }
+  }
+
+  Future<void> _pickLicensePhoto() async {
+    try {
+      final pickedFile = await _imagePicker.pickImage(source: ImageSource.gallery);
+      if (pickedFile != null) {
+        setState(() => _licensePhoto = File(pickedFile.path));
+      }
+    } catch (e) {
+      Logger.error('Error picking photo: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isEditing = widget.driver != null;
@@ -71,10 +98,63 @@ class _AddDriverScreenState extends State<AddDriverScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Información del Conductor',
-                style: Theme.of(context).textTheme.titleLarge,
+                'Foto del Conductor',
+                style: Theme.of(context).textTheme.titleMedium,
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
+              GestureDetector(
+                onTap: _pickDriverPhoto,
+                child: Container(
+                  height: 150,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey[300]!),
+                    borderRadius: BorderRadius.circular(12),
+                    color: Colors.grey[100],
+                  ),
+                  child: _driverPhoto != null
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.file(_driverPhoto!, fit: BoxFit.cover),
+                        )
+                      : widget.driver?.photoUrl != null
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: Image.network(
+                                widget.driver!.photoUrl!,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Center(
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.person, size: 48, color: Colors.grey[600]),
+                                        const SizedBox(height: 8),
+                                        const Text('Tap para cambiar foto'),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              ),
+                            )
+                          : Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.person_add, size: 48, color: Colors.grey[600]),
+                                  const SizedBox(height: 8),
+                                  const Text('Tap para agregar foto'),
+                                ],
+                              ),
+                            ),
+                ),
+              ),
+              const SizedBox(height: 32),
+              Text(
+                'Información Personal',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 16),
               _buildTextFormField(
                 controller: _nameController,
                 label: 'Nombre Completo',
@@ -100,9 +180,9 @@ class _AddDriverScreenState extends State<AddDriverScreen> {
                 hint: 'conductor@example.com',
                 keyboardType: TextInputType.emailAddress,
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 32),
               Text(
-                'Información de Licencia',
+                'Licencia de Conducción',
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               const SizedBox(height: 16),
@@ -145,6 +225,59 @@ class _AddDriverScreenState extends State<AddDriverScreen> {
                       const Icon(Icons.calendar_today, color: Color(0xFF1A73E8)),
                     ],
                   ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Foto de la Licencia',
+                style: Theme.of(context).textTheme.labelMedium,
+              ),
+              const SizedBox(height: 8),
+              GestureDetector(
+                onTap: _pickLicensePhoto,
+                child: Container(
+                  height: 120,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey[300]!),
+                    borderRadius: BorderRadius.circular(8),
+                    color: Colors.grey[100],
+                  ),
+                  child: _licensePhoto != null
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.file(_licensePhoto!, fit: BoxFit.cover),
+                        )
+                      : widget.driver?.licensePhotoUrl != null
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.network(
+                                widget.driver!.licensePhotoUrl!,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Center(
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.document_scanner, size: 36, color: Colors.grey[600]),
+                                        const SizedBox(height: 4),
+                                        const Text('Tap para cambiar', style: TextStyle(fontSize: 11)),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              ),
+                            )
+                          : Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.document_scanner, size: 36, color: Colors.grey[600]),
+                                  const SizedBox(height: 4),
+                                  const Text('Tap para agregar foto', style: TextStyle(fontSize: 11)),
+                                ],
+                              ),
+                            ),
                 ),
               ),
               const SizedBox(height: 32),
@@ -217,6 +350,21 @@ class _AddDriverScreenState extends State<AddDriverScreen> {
         throw Exception('Usuario no autenticado');
       }
 
+      String? driverPhotoUrl;
+      String? licensePhotoUrl;
+
+      if (_driverPhoto != null) {
+        driverPhotoUrl = await _firebaseService.uploadDriverPhoto(userId, _driverPhoto!);
+      } else if (widget.driver != null) {
+        driverPhotoUrl = widget.driver!.photoUrl;
+      }
+
+      if (_licensePhoto != null) {
+        licensePhotoUrl = await _firebaseService.uploadLicensePhoto(userId, _licensePhoto!);
+      } else if (widget.driver != null) {
+        licensePhotoUrl = widget.driver!.licensePhotoUrl;
+      }
+
       if (widget.driver == null) {
         final newDriver = Driver(
           id: _firebaseService.generateId(),
@@ -228,6 +376,8 @@ class _AddDriverScreenState extends State<AddDriverScreen> {
               ? null
               : _licenseNumberController.text.trim(),
           licenseExpiry: _licenseExpiry,
+          photoUrl: driverPhotoUrl,
+          licensePhotoUrl: licensePhotoUrl,
           createdAt: DateTime.now(),
         );
 
@@ -249,6 +399,8 @@ class _AddDriverScreenState extends State<AddDriverScreen> {
               ? null
               : _licenseNumberController.text.trim(),
           licenseExpiry: _licenseExpiry,
+          photoUrl: driverPhotoUrl,
+          licensePhotoUrl: licensePhotoUrl,
         );
 
         await _firebaseService.updateDriver(updatedDriver);
