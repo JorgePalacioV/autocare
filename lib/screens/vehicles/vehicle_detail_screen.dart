@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../models/models.dart';
 import '../../services/firebase_service.dart';
 import 'add_vehicle_screen.dart';
+import '../maintenance/add_maintenance_screen.dart';
 
 class VehicleDetailScreen extends StatefulWidget {
   final Vehicle vehicle;
@@ -18,11 +19,13 @@ class VehicleDetailScreen extends StatefulWidget {
 class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
   final _firebaseService = FirebaseService();
   late Vehicle _currentVehicle;
+  late Future<Map<String, dynamic>> _vehicleStatsFuture;
 
   @override
   void initState() {
     super.initState();
     _currentVehicle = widget.vehicle;
+    _vehicleStatsFuture = _firebaseService.getVehicleStats(_currentVehicle.id);
   }
 
   @override
@@ -43,7 +46,28 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (_currentVehicle.photoUrl != null && _currentVehicle.photoUrl!.isNotEmpty)
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.network(
+                  _currentVehicle.photoUrl!,
+                  height: 200,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      height: 200,
+                      color: Colors.grey[300],
+                      child: Icon(Icons.image_not_supported, color: Colors.grey[600]),
+                    );
+                  },
+                ),
+              ),
+            if (_currentVehicle.photoUrl != null && _currentVehicle.photoUrl!.isNotEmpty)
+              const SizedBox(height: 24),
             _buildVehicleCard(),
+            const SizedBox(height: 24),
+            _buildStatsSection(),
             const SizedBox(height: 24),
             _buildMaintenanceSection(),
           ],
@@ -110,6 +134,116 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
     );
   }
 
+  Widget _buildStatsSection() {
+    return FutureBuilder<Map<String, dynamic>>(
+      future: _vehicleStatsFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (snapshot.hasError) {
+          return const SizedBox.shrink();
+        }
+
+        final stats = snapshot.data ?? {};
+        final totalCount = stats['totalCount'] as int? ?? 0;
+        final totalCost = stats['totalCost'] as double? ?? 0.0;
+        final averageCost = stats['averageCost'] as double? ?? 0.0;
+        final daysLastMaintenance = stats['daysLastMaintenance'] as int?;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Estadísticas',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildStatCard(
+                    icon: Icons.build,
+                    label: 'Mantenimientos',
+                    value: '$totalCount',
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildStatCard(
+                    icon: Icons.attach_money,
+                    label: 'Costo Total',
+                    value: '\$${totalCost.toStringAsFixed(0)}',
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildStatCard(
+                    icon: Icons.trending_down,
+                    label: 'Promedio',
+                    value: '\$${averageCost.toStringAsFixed(0)}',
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildStatCard(
+                    icon: Icons.calendar_today,
+                    label: 'Hace',
+                    value: daysLastMaintenance != null ? '${daysLastMaintenance}d' : '-',
+                  ),
+                ),
+              ],
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildStatCard({
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A73E8).withAlpha(13),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: const Color(0xFF1A73E8).withAlpha(50),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 20, color: const Color(0xFF1A73E8)),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              color: Colors.grey[600],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildMaintenanceSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -122,13 +256,7 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
               style: Theme.of(context).textTheme.titleLarge,
             ),
             TextButton.icon(
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Feature en desarrollo: Registrar mantenimiento'),
-                  ),
-                );
-              },
+              onPressed: _addMaintenance,
               icon: const Icon(Icons.add),
               label: const Text('Agregar'),
             ),
@@ -188,11 +316,24 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
                     subtitle: Text(
                       '${_formatDate(maintenance.date)} • ${maintenance.km} km',
                     ),
-                    trailing: Text(
-                      '\$${maintenance.cost.toStringAsFixed(2)}',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        color: Colors.blue,
+                    trailing: PopupMenuButton(
+                      itemBuilder: (context) => [
+                        PopupMenuItem(
+                          child: const Text('Editar'),
+                          onTap: () => _editMaintenance(maintenance),
+                        ),
+                        PopupMenuItem(
+                          child: const Text('Eliminar',
+                              style: TextStyle(color: Colors.red)),
+                          onTap: () => _deleteMaintenance(maintenance),
+                        ),
+                      ],
+                      child: Text(
+                        '\$${maintenance.cost.toStringAsFixed(2)}',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: Colors.blue,
+                        ),
                       ),
                     ),
                   ),
@@ -255,5 +396,57 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
         _currentVehicle = updated;
       });
     }
+  }
+
+  void _addMaintenance() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => AddMaintenanceScreen(
+          vehicleId: _currentVehicle.id,
+        ),
+      ),
+    );
+  }
+
+  void _editMaintenance(Maintenance maintenance) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => AddMaintenanceScreen(
+          vehicleId: _currentVehicle.id,
+          maintenance: maintenance,
+        ),
+      ),
+    );
+  }
+
+  void _deleteMaintenance(Maintenance maintenance) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Eliminar Mantenimiento'),
+        content: const Text('¿Estás seguro de que quieres eliminar este mantenimiento?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _firebaseService.deleteMaintenance(maintenance.id).then((_) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Mantenimiento eliminado')),
+                );
+              }).catchError((e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Error: $e')),
+                );
+              });
+            },
+            child: const Text('Eliminar', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
   }
 }

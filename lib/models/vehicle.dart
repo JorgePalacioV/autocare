@@ -12,6 +12,7 @@ class Vehicle {
   final DateTime? updatedAt;
   final String? color;
   final String? vin;
+  final String? photoUrl;
 
   Vehicle({
     required this.id,
@@ -25,6 +26,7 @@ class Vehicle {
     this.updatedAt,
     this.color,
     this.vin,
+    this.photoUrl,
   }) {
     _validateYear(year);
     _validateKm(currentKm);
@@ -78,6 +80,7 @@ class Vehicle {
       updatedAt: DateTime.now(),
       color: color,
       vin: vin,
+      photoUrl: photoUrl,
     );
   }
 
@@ -93,6 +96,7 @@ class Vehicle {
     DateTime? updatedAt,
     String? color,
     String? vin,
+    String? photoUrl,
   }) {
     return Vehicle(
       id: id ?? this.id,
@@ -106,6 +110,7 @@ class Vehicle {
       updatedAt: updatedAt ?? this.updatedAt ?? DateTime.now(),
       color: color ?? this.color,
       vin: vin ?? this.vin,
+      photoUrl: photoUrl ?? this.photoUrl,
     );
   }
 
@@ -122,6 +127,7 @@ class Vehicle {
       'updatedAt': (updatedAt ?? DateTime.now()).toIso8601String(),
       'color': color,
       'vin': vin,
+      'photoUrl': photoUrl,
     };
   }
 
@@ -138,6 +144,7 @@ class Vehicle {
       updatedAt: map['updatedAt'] != null ? DateTime.parse(map['updatedAt']) : null,
       color: map['color'],
       vin: map['vin'],
+      photoUrl: map['photoUrl'],
     );
   }
 

@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../models/models.dart';
 import '../../services/firebase_service.dart';
 import '../../services/logger.dart';
@@ -15,6 +17,7 @@ class AddVehicleScreen extends StatefulWidget {
 class _AddVehicleScreenState extends State<AddVehicleScreen> {
   final _formKey = GlobalKey<FormState>();
   final _firebaseService = FirebaseService();
+  final _imagePicker = ImagePicker();
   bool _isLoading = false;
 
   late TextEditingController _brandController;
@@ -22,6 +25,9 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
   late TextEditingController _plateController;
   late TextEditingController _yearController;
   late TextEditingController _kmController;
+
+  File? _selectedImage;
+  String? _existingPhotoUrl;
 
   @override
   void initState() {
@@ -33,6 +39,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
         TextEditingController(text: widget.vehicle?.year.toString() ?? '');
     _kmController = TextEditingController(
         text: widget.vehicle?.currentKm.toString() ?? '');
+    _existingPhotoUrl = widget.vehicle?.photoUrl;
   }
 
   @override
@@ -61,6 +68,8 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              _buildPhotoSection(),
+              const SizedBox(height: 24),
               Text(
                 'Información del vehículo',
                 style: Theme.of(context).textTheme.titleLarge,
@@ -177,6 +186,131 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
     );
   }
 
+  Widget _buildPhotoSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Foto del Vehículo',
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: 12),
+        GestureDetector(
+          onTap: _isLoading ? null : _pickImage,
+          child: Container(
+            height: 160,
+            decoration: BoxDecoration(
+              color: const Color(0xFF1A73E8).withAlpha(13),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: const Color(0xFF1A73E8).withAlpha(50),
+              ),
+            ),
+            child: _buildPhotoContent(),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPhotoContent() {
+    if (_selectedImage != null) {
+      return Stack(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Image.file(
+              _selectedImage!,
+              fit: BoxFit.cover,
+              width: double.infinity,
+              height: double.infinity,
+            ),
+          ),
+          Positioned(
+            top: 8,
+            right: 8,
+            child: GestureDetector(
+              onTap: () => setState(() => _selectedImage = null),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.red,
+                  borderRadius: BorderRadius.circular(50),
+                ),
+                padding: const EdgeInsets.all(4),
+                child: const Icon(
+                  Icons.close,
+                  color: Colors.white,
+                  size: 20,
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    if (_existingPhotoUrl != null && _existingPhotoUrl!.isNotEmpty) {
+      return Stack(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Image.network(
+              _existingPhotoUrl!,
+              fit: BoxFit.cover,
+              width: double.infinity,
+              height: double.infinity,
+              errorBuilder: (context, error, stackTrace) {
+                return _buildEmptyPhotoPlaceholder();
+              },
+            ),
+          ),
+          Positioned(
+            top: 8,
+            right: 8,
+            child: GestureDetector(
+              onTap: () => setState(() => _existingPhotoUrl = null),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.red,
+                  borderRadius: BorderRadius.circular(50),
+                ),
+                padding: const EdgeInsets.all(4),
+                child: const Icon(
+                  Icons.close,
+                  color: Colors.white,
+                  size: 20,
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    return _buildEmptyPhotoPlaceholder();
+  }
+
+  Widget _buildEmptyPhotoPlaceholder() {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(
+          Icons.image_outlined,
+          size: 48,
+          color: Colors.grey[400],
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Tap para seleccionar foto',
+          style: TextStyle(
+            color: Colors.grey[600],
+            fontSize: 14,
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildTextFormField({
     required TextEditingController controller,
     required String label,
@@ -201,6 +335,56 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
     );
   }
 
+  Future<void> _pickImage() async {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text('Tomar Foto'),
+              onTap: () {
+                Navigator.pop(context);
+                _captureImage();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('Galería'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickFromGallery();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _captureImage() async {
+    final image = await _imagePicker.pickImage(source: ImageSource.camera);
+    if (image != null) {
+      setState(() {
+        _selectedImage = File(image.path);
+        _existingPhotoUrl = null;
+      });
+    }
+  }
+
+  Future<void> _pickFromGallery() async {
+    final image = await _imagePicker.pickImage(source: ImageSource.gallery);
+    if (image != null) {
+      setState(() {
+        _selectedImage = File(image.path);
+        _existingPhotoUrl = null;
+      });
+    }
+  }
+
   void _submitForm() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -217,8 +401,28 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
       final year = int.parse(_yearController.text);
       final km = int.parse(_kmController.text);
 
+      String? photoUrl = _existingPhotoUrl;
+
+      if (_selectedImage != null) {
+        Logger.info('Subiendo foto...');
+        try {
+          final uploadedUrl = await _firebaseService.uploadVehiclePhoto(
+            userId,
+            widget.vehicle?.id ?? _firebaseService.generateId(),
+            _selectedImage!,
+          );
+          if (uploadedUrl != null) {
+            photoUrl = uploadedUrl;
+            Logger.success('Foto subida correctamente');
+          } else {
+            Logger.warning('No se pudo subir la foto, continuando sin ella');
+          }
+        } catch (e) {
+          Logger.warning('Error al subir foto: $e, continuando sin ella');
+        }
+      }
+
       if (widget.vehicle == null) {
-        // Crear nuevo vehículo
         final newVehicle = Vehicle(
           id: _firebaseService.generateId(),
           userId: userId,
@@ -227,6 +431,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
           plate: _plateController.text.trim(),
           year: year,
           currentKm: km,
+          photoUrl: photoUrl,
           createdAt: DateTime.now(),
         );
 
@@ -240,13 +445,13 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
           );
         }
       } else {
-        // Editar vehículo existente
         final updatedVehicle = widget.vehicle!.copyWith(
           brand: _brandController.text.trim(),
           model: _modelController.text.trim(),
           plate: _plateController.text.trim(),
           year: year,
           currentKm: km,
+          photoUrl: photoUrl,
         );
 
         await _firebaseService.updateVehicle(updatedVehicle);
@@ -263,7 +468,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
       Logger.error('Error al guardar vehículo: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
+          SnackBar(content: Text('Error: ${e.toString()}')),
         );
       }
     } finally {

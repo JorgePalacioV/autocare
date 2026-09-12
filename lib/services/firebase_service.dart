@@ -1,5 +1,8 @@
+import 'dart:async';
+import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:uuid/uuid.dart';
 import '../models/models.dart';
 import 'logger.dart';
@@ -23,6 +26,7 @@ class FirebaseService {
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseStorage _storage = FirebaseStorage.instance;
   static const String _logTag = '[FirebaseService]';
 
   // ============ EMULADORES ============
@@ -36,6 +40,9 @@ class FirebaseService {
 
       _firestore.useFirestoreEmulator('localhost', 8080);
       Logger.success('✓ Firestore Emulator conectado (localhost:8080)', tag: _logTag);
+
+      _storage.useStorageEmulator('localhost', 9199);
+      Logger.success('✓ Storage Emulator conectado (localhost:9199)', tag: _logTag);
     } catch (e) {
       Logger.error('Error conectando a emuladores: $e', tag: _logTag);
     }
@@ -346,6 +353,43 @@ class FirebaseService {
 
   // ============ ESTADÍSTICAS ============
 
+  Future<Map<String, dynamic>> getVehicleStats(String vehicleId) async {
+    try {
+      Logger.log('Calculando estadísticas del vehículo: $vehicleId');
+      final maintenances = await getVehicleMaintenances(vehicleId);
+
+      double totalCost = 0;
+      int totalCount = maintenances.length;
+      DateTime? lastMaintenance;
+      int maxKm = 0;
+
+      for (final m in maintenances) {
+        totalCost += m.cost;
+        maxKm = maxKm < m.km ? m.km : maxKm;
+        if (lastMaintenance == null || m.date.isAfter(lastMaintenance)) {
+          lastMaintenance = m.date;
+        }
+      }
+
+      final stats = {
+        'totalCount': totalCount,
+        'totalCost': totalCost,
+        'averageCost': totalCount > 0 ? totalCost / totalCount : 0.0,
+        'lastMaintenanceDate': lastMaintenance,
+        'daysLastMaintenance': lastMaintenance != null
+            ? DateTime.now().difference(lastMaintenance).inDays
+            : null,
+        'maxKm': maxKm,
+      };
+
+      Logger.log('✓ Estadísticas del vehículo calculadas');
+      return stats;
+    } catch (e) {
+      Logger.log('✗ Error al calcular estadísticas: $e');
+      rethrow;
+    }
+  }
+
   Future<Map<String, dynamic>> getMaintenanceStats(String userId) async {
     try {
       Logger.log('Calculando estadísticas de mantenimiento para: $userId');
@@ -377,6 +421,30 @@ class FirebaseService {
     } catch (e) {
       Logger.log('✗ Error al calcular estadísticas: $e');
       rethrow;
+    }
+  }
+
+  // ============ FOTOS ============
+
+  Future<String?> uploadVehiclePhoto(String userId, String vehicleId, File photoFile) async {
+    try {
+      Logger.log('Subiendo foto del vehículo: $vehicleId');
+      final fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final ref = _storage.ref().child('vehicles/$userId/$vehicleId/$fileName');
+
+      Logger.log('Iniciando upload a: vehicles/$userId/$vehicleId/$fileName');
+
+      await ref.putFile(photoFile).timeout(const Duration(seconds: 10));
+
+      final url = await ref.getDownloadURL();
+      Logger.log('✓ Foto subida: $url');
+      return url;
+    } on TimeoutException {
+      Logger.warning('Upload de foto cancelado por timeout');
+      return null;
+    } catch (e) {
+      Logger.error('✗ Error al subir foto (continuando sin foto): $e', tag: _logTag);
+      return null;
     }
   }
 
