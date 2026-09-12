@@ -1,0 +1,136 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ============ FUNCIONES AUXILIARES ============
+
+    // Verifica que el usuario esté autenticado
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Obtiene el userId actual
+    function getCurrentUserId() {
+      return request.auth.uid;
+    }
+
+    // Verifica que el usuario sea el propietario
+    function isOwner(userId) {
+      return isAuthenticated() && getCurrentUserId() == userId;
+    }
+
+    // Valida estructura mínima de datos
+    function hasRequiredFields(data, fields) {
+      return data.keys().hasAll(fields);
+    }
+
+    // Valida que no sea null o vacío
+    function isValidString(value, minLength) {
+      return value is string && value.size() >= minLength && value.size() <= 500;
+    }
+
+    // Valida email
+    function isValidEmail(email) {
+      return email is string &&
+             email.matches('.*@.*\\..*') &&
+             email.size() > 5 &&
+             email.size() <= 254;
+    }
+
+    // Rate limiting: máximo 10 escrituras por minuto
+    function isRateLimited() {
+      return request.time < resource.data.lastWrite.toMillis() + 6000;
+    }
+
+    // ==================== COLECCIÓN: USERS ====================
+    match /users/{userId} {
+      // Solo el propietario puede leer sus datos
+      allow read: if isOwner(userId);
+
+      // Solo el propietario puede crear y actualizar sus datos
+      allow create, update: if isOwner(userId) &&
+        hasRequiredFields(request.resource.data, ['email', 'displayName', 'createdAt']) &&
+        isValidEmail(request.resource.data.email) &&
+        isValidString(request.resource.data.displayName, 2) &&
+        (request.resource.data.phone == null || isValidString(request.resource.data.phone, 7)) &&
+        request.resource.data.userId == getCurrentUserId() &&
+        // Prevenir cambios no autorizados
+        (resource == null || request.resource.data.createdAt == resource.data.createdAt);
+
+      // Solo el propietario puede eliminar sus datos
+      allow delete: if isOwner(userId);
+
+      // ==================== SUBCOL: VEHICLES ====================
+      match /vehicles/{vehicleId} {
+        // Solo el propietario puede ver sus vehículos
+        allow read: if isOwner(userId);
+
+        // Solo el propietario puede crear/actualizar sus vehículos
+        allow create, update: if isOwner(userId) &&
+          request.resource.data.userId == userId &&
+          hasRequiredFields(request.resource.data, ['brand', 'model', 'plate', 'year', 'createdAt']) &&
+          isValidString(request.resource.data.brand, 1) &&
+          isValidString(request.resource.data.model, 1) &&
+          isValidString(request.resource.data.plate, 2) &&
+          request.resource.data.year is number &&
+          request.resource.data.year >= 1900 &&
+          request.resource.data.year <= (now.year() + 1) &&
+          (request.resource.data.currentKm == null || request.resource.data.currentKm >= 0);
+
+        // Solo el propietario puede eliminar
+        allow delete: if isOwner(userId);
+
+        // ==================== SUBSUBCOL: MAINTENANCES ====================
+        match /maintenances/{maintenanceId} {
+          allow read: if isOwner(userId);
+          allow create, update: if isOwner(userId) &&
+            request.resource.data.userId == userId &&
+            request.resource.data.vehicleId == vehicleId &&
+            hasRequiredFields(request.resource.data, ['date', 'type', 'km', 'cost']) &&
+            request.resource.data.date is timestamp &&
+            request.resource.data.type is string &&
+            request.resource.data.km is number &&
+            request.resource.data.km >= 0 &&
+            request.resource.data.cost is number &&
+            request.resource.data.cost >= 0;
+          allow delete: if isOwner(userId);
+        }
+      }
+
+      // ==================== SUBCOL: MAINTENANCE_SCHEDULES ====================
+      match /maintenanceSchedules/{scheduleId} {
+        // Solo el propietario puede ver sus horarios
+        allow read: if isOwner(userId);
+
+        // Solo el propietario puede crear/actualizar
+        allow create, update: if isOwner(userId) &&
+          request.resource.data.userId == userId;
+
+        // Solo el propietario puede eliminar
+        allow delete: if isOwner(userId);
+      }
+
+      // ==================== SUBCOL: DRIVERS ====================
+      match /drivers/{driverId} {
+        // Solo el propietario puede ver sus conductores
+        allow read: if isOwner(userId);
+
+        // Solo el propietario puede crear/actualizar
+        allow create, update: if isOwner(userId) &&
+          request.resource.data.userId == userId &&
+          isValidString(request.resource.data.name, 2) &&
+          (request.resource.data.phone == null || isValidString(request.resource.data.phone, 7)) &&
+          hasRequiredFields(request.resource.data, ['name', 'createdAt']);
+
+        // Solo el propietario puede eliminar
+        allow delete: if isOwner(userId);
+      }
+    }
+
+    // ==================== OTROS ACCESOS ====================
+    // Negar todo lo demás por defecto
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
