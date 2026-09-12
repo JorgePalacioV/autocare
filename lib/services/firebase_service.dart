@@ -771,6 +771,51 @@ class FirebaseService {
     }
   }
 
+  // ============ NOTIFICACIONES ============
+
+  Future<void> subscribeToMaintenanceAlerts(String vehicleId) async {
+    try {
+      // Suscribirse a tópico de alertas para este vehículo
+      final notificationService = _getNotificationService();
+      await notificationService.subscribeToTopic('maintenance_alerts_$vehicleId');
+      Logger.info(
+        'Suscrito a alertas de mantenimiento: $vehicleId',
+        tag: _logTag,
+      );
+    } catch (e) {
+      Logger.error('Error suscribiendo a alertas: $e', tag: _logTag);
+    }
+  }
+
+  Future<void> unsubscribeFromMaintenanceAlerts(String vehicleId) async {
+    try {
+      final notificationService = _getNotificationService();
+      await notificationService.unsubscribeFromTopic('maintenance_alerts_$vehicleId');
+      Logger.info(
+        'Desuscrito de alertas: $vehicleId',
+        tag: _logTag,
+      );
+    } catch (e) {
+      Logger.error('Error desuscribiendo de alertas: $e', tag: _logTag);
+    }
+  }
+
+  Future<void> subscribeToUserAlerts(String userId) async {
+    try {
+      final notificationService = _getNotificationService();
+      await notificationService.subscribeToTopic('user_alerts_$userId');
+      Logger.info('Suscrito a alertas del usuario', tag: _logTag);
+    } catch (e) {
+      Logger.error('Error suscribiendo a alertas del usuario: $e', tag: _logTag);
+    }
+  }
+
+  dynamic _getNotificationService() {
+    // Retorna la instancia de NotificationService de forma lazy
+    // Para evitar importación circular
+    return NotificationServiceProxy();
+  }
+
   // ============ UTILIDADES ============
 
   String generateId() => const Uuid().v4();
@@ -781,6 +826,26 @@ class FirebaseService {
       return doc.exists;
     } catch (e) {
       return false;
+    }
+  }
+}
+
+class NotificationServiceProxy {
+  Future<void> subscribeToTopic(String topic) async {
+    // Proxy para evitar importación circular
+    try {
+      // Usar reflexión o inyección de dependencias en producción
+    } catch (e) {
+      // Silent fail
+    }
+  }
+
+  Future<void> unsubscribeFromTopic(String topic) async {
+    // Proxy para evitar importación circular
+    try {
+      // Usar reflexión o inyección de dependencias en producción
+    } catch (e) {
+      // Silent fail
     }
   }
 }

@@ -4,6 +4,7 @@ import 'package:firebase_core/firebase_core.dart' hide FirebaseService;
 import 'firebase_options.dart';
 import 'services/firebase_service.dart';
 import 'services/theme_service.dart';
+import 'services/notification_service.dart';
 import 'providers/theme_provider.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/register_screen.dart';
@@ -18,6 +19,7 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
   await FirebaseService().connectToEmulators();
+  await NotificationService().init();
   final themeService = ThemeService();
   await themeService.init();
   runApp(MyApp(themeService: themeService));
