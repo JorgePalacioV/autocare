@@ -3,6 +3,7 @@ import '../../models/models.dart';
 import '../../services/firebase_service.dart';
 import 'add_vehicle_screen.dart';
 import '../maintenance/add_maintenance_screen.dart';
+import '../maintenance/maintenance_history_screen.dart';
 
 class VehicleDetailScreen extends StatefulWidget {
   final Vehicle vehicle;
@@ -381,10 +382,19 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
               'Mantenimientos',
               style: Theme.of(context).textTheme.titleLarge,
             ),
-            TextButton.icon(
-              onPressed: _addMaintenance,
-              icon: const Icon(Icons.add),
-              label: const Text('Agregar'),
+            Row(
+              children: [
+                TextButton.icon(
+                  onPressed: _viewHistory,
+                  icon: const Icon(Icons.history),
+                  label: const Text('Historial'),
+                ),
+                TextButton.icon(
+                  onPressed: _addMaintenance,
+                  icon: const Icon(Icons.add),
+                  label: const Text('Agregar'),
+                ),
+              ],
             ),
           ],
         ),
@@ -572,6 +582,17 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
             child: const Text('Eliminar', style: TextStyle(color: Colors.red)),
           ),
         ],
+      ),
+    );
+  }
+
+  void _viewHistory() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => MaintenanceHistoryScreen(
+          vehicleId: _currentVehicle.id,
+          vehicleName: '${_currentVehicle.brand} ${_currentVehicle.model}',
+        ),
       ),
     );
   }
