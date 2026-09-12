@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:firebase_core/firebase_core.dart' hide FirebaseService;
 import 'firebase_options.dart';
 import 'services/firebase_service.dart';
@@ -6,6 +7,7 @@ import 'screens/auth/login_screen.dart';
 import 'screens/auth/register_screen.dart';
 import 'screens/auth/forgot_password_screen.dart';
 import 'screens/home_screen.dart';
+import 'l10n/app_localizations_delegate.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -57,6 +59,16 @@ class MyApp extends StatelessWidget {
           ),
         ),
       ),
+      localizationsDelegates: const [
+        AppLocalizationsDelegate(),
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('es'),
+        Locale('en'),
+      ],
+      locale: const Locale('es'),
       home: const AuthWrapper(),
       routes: {
         '/login': (context) => const LoginScreen(),
