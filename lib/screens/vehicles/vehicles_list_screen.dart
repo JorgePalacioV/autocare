@@ -158,8 +158,9 @@ class VehicleCard extends StatelessWidget {
   final Vehicle vehicle;
   final VoidCallback onTap;
   final VoidCallback onDelete;
+  final FirebaseService _firebaseService = FirebaseService();
 
-  const VehicleCard({
+  VehicleCard({
     Key? key,
     required this.vehicle,
     required this.onTap,
@@ -235,6 +236,60 @@ class VehicleCard extends StatelessWidget {
                       ),
                     ],
                   ),
+                  if (vehicle.primaryDriverId != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1A73E8).withAlpha(13),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                            color: const Color(0xFF1A73E8).withAlpha(50),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.person_outline, size: 14, color: const Color(0xFF1A73E8)),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: FutureBuilder<Driver?>(
+                                future: _firebaseService.getDriver(
+                                  _firebaseService.currentUserId ?? '',
+                                  vehicle.primaryDriverId ?? '',
+                                ),
+                                builder: (context, snapshot) {
+                                  if (snapshot.hasData && snapshot.data != null) {
+                                    return Text(
+                                      'Conductor: ${snapshot.data!.name}',
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: Color(0xFF1A73E8),
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    );
+                                  }
+                                  return const SizedBox.shrink();
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                  else
+                    const Padding(
+                      padding: EdgeInsets.only(bottom: 12),
+                      child: Text(
+                        'Sin conductor asignado',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ),
                   const SizedBox(height: 12),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,

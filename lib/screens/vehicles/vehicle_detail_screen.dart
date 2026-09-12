@@ -4,6 +4,7 @@ import '../../services/firebase_service.dart';
 import 'add_vehicle_screen.dart';
 import '../maintenance/add_maintenance_screen.dart';
 import '../maintenance/maintenance_history_screen.dart';
+import '../drivers/drivers_list_screen.dart';
 
 class VehicleDetailScreen extends StatefulWidget {
   final Vehicle vehicle;
@@ -67,6 +68,8 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
             if (_currentVehicle.photoUrl != null && _currentVehicle.photoUrl!.isNotEmpty)
               const SizedBox(height: 24),
             _buildVehicleCard(),
+            const SizedBox(height: 24),
+            _buildDriverSection(),
             const SizedBox(height: 24),
             _buildStatsSection(),
             const SizedBox(height: 24),
@@ -133,6 +136,132 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildDriverSection() {
+    return Card(
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Conductor Asignado',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 20),
+            if (_currentVehicle.primaryDriverId == null)
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Sin conductor asignado',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w500,
+                            color: Colors.grey,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Selecciona un conductor para este vehículo',
+                          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                        ),
+                      ],
+                    ),
+                    IconButton(
+                      onPressed: _changeDriver,
+                      icon: const Icon(Icons.add_circle_outline),
+                    ),
+                  ],
+                ),
+              )
+            else
+              FutureBuilder<Driver?>(
+                future: _firebaseService.getDriver(
+                  _firebaseService.currentUserId ?? '',
+                  _currentVehicle.primaryDriverId ?? '',
+                ),
+                builder: (context, snapshot) {
+                  if (snapshot.hasData && snapshot.data != null) {
+                    final driver = snapshot.data!;
+                    return Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1A73E8).withAlpha(13),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: const Color(0xFF1A73E8).withAlpha(50),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 50,
+                            height: 50,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF1A73E8),
+                              borderRadius: BorderRadius.circular(50),
+                            ),
+                            child: Center(
+                              child: Text(
+                                driver.initials,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 18,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  driver.name,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                if (driver.phone != null)
+                                  Text(
+                                    driver.phone!,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: _changeDriver,
+                            icon: const Icon(Icons.edit),
+                            iconSize: 18,
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+                  return const SizedBox.shrink();
+                },
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -595,5 +724,87 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
         ),
       ),
     );
+  }
+
+  void _changeDriver() async {
+    final userId = _firebaseService.currentUserId;
+    if (userId == null) return;
+
+    final drivers = await _firebaseService.getUserDrivers(userId);
+
+    if (mounted) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Seleccionar Conductor'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  title: const Text('Sin conductor'),
+                  onTap: () {
+                    _updateDriver(null);
+                    Navigator.pop(context);
+                  },
+                ),
+                ...drivers.map((driver) {
+                  return ListTile(
+                    title: Text(driver.name),
+                    subtitle: Text(driver.phone ?? 'Sin teléfono'),
+                    onTap: () {
+                      _updateDriver(driver.id);
+                      Navigator.pop(context);
+                    },
+                  );
+                }),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancelar'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const DriversListScreen(),
+                  ),
+                );
+              },
+              child: const Text('Agregar Conductor'),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
+  void _updateDriver(String? driverId) async {
+    try {
+      final updatedVehicle = _currentVehicle.copyWith(
+        primaryDriverId: driverId,
+      );
+
+      await _firebaseService.updateVehicle(updatedVehicle);
+      setState(() {
+        _currentVehicle = updatedVehicle;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Conductor asignado exitosamente')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    }
   }
 }
