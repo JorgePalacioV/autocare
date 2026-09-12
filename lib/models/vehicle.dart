@@ -13,6 +13,7 @@ class Vehicle {
   final String? color;
   final String? vin;
   final String? photoUrl;
+  final String? primaryDriverId;
 
   Vehicle({
     required this.id,
@@ -27,6 +28,7 @@ class Vehicle {
     this.color,
     this.vin,
     this.photoUrl,
+    this.primaryDriverId,
   }) {
     _validateYear(year);
     _validateKm(currentKm);
@@ -81,6 +83,7 @@ class Vehicle {
       color: color,
       vin: vin,
       photoUrl: photoUrl,
+      primaryDriverId: primaryDriverId,
     );
   }
 
@@ -97,6 +100,7 @@ class Vehicle {
     String? color,
     String? vin,
     String? photoUrl,
+    String? primaryDriverId,
   }) {
     return Vehicle(
       id: id ?? this.id,
@@ -111,6 +115,7 @@ class Vehicle {
       color: color ?? this.color,
       vin: vin ?? this.vin,
       photoUrl: photoUrl ?? this.photoUrl,
+      primaryDriverId: primaryDriverId ?? this.primaryDriverId,
     );
   }
 
@@ -128,6 +133,7 @@ class Vehicle {
       'color': color,
       'vin': vin,
       'photoUrl': photoUrl,
+      'primaryDriverId': primaryDriverId,
     };
   }
 
@@ -145,6 +151,7 @@ class Vehicle {
       color: map['color'],
       vin: map['vin'],
       photoUrl: map['photoUrl'],
+      primaryDriverId: map['primaryDriverId'],
     );
   }
 

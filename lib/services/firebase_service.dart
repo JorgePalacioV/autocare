@@ -642,6 +642,93 @@ class FirebaseService {
     }
   }
 
+  // ============ CONDUCTORES ============
+
+  Future<void> addDriver(Driver driver) async {
+    try {
+      Logger.log('Agregando conductor: ${driver.name}');
+      await _firestore
+          .collection('users')
+          .doc(driver.userId)
+          .collection('drivers')
+          .doc(driver.id)
+          .set(driver.toMap());
+      Logger.log('✓ Conductor agregado: ${driver.name}');
+    } catch (e) {
+      Logger.error('Error al agregar conductor: $e', tag: _logTag);
+      rethrow;
+    }
+  }
+
+  Future<Driver?> getDriver(String userId, String driverId) async {
+    try {
+      final doc = await _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('drivers')
+          .doc(driverId)
+          .get();
+
+      if (doc.exists) {
+        return Driver.fromMap(doc.data() as Map<String, dynamic>);
+      }
+      return null;
+    } catch (e) {
+      Logger.error('Error al obtener conductor: $e', tag: _logTag);
+      return null;
+    }
+  }
+
+  Future<List<Driver>> getUserDrivers(String userId) async {
+    try {
+      final docs = await _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('drivers')
+          .orderBy('createdAt', descending: true)
+          .get();
+
+      final drivers = docs.docs.map((doc) => Driver.fromMap(doc.data())).toList();
+      Logger.log('✓ ${drivers.length} conductores encontrados');
+      return drivers;
+    } catch (e) {
+      Logger.error('Error al obtener conductores: $e', tag: _logTag);
+      return [];
+    }
+  }
+
+  Future<void> updateDriver(Driver driver) async {
+    try {
+      Logger.log('Actualizando conductor: ${driver.name}');
+      await _firestore
+          .collection('users')
+          .doc(driver.userId)
+          .collection('drivers')
+          .doc(driver.id)
+          .update(driver.toMap());
+      Logger.log('✓ Conductor actualizado: ${driver.name}');
+    } catch (e) {
+      Logger.error('Error al actualizar conductor: $e', tag: _logTag);
+      rethrow;
+    }
+  }
+
+  Future<void> deleteDriver(String userId, String driverId) async {
+    try {
+      Logger.log('Eliminando conductor: $driverId');
+      await _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('drivers')
+          .doc(driverId)
+          .delete();
+      Logger.log('✓ Conductor eliminado: $driverId');
+    } catch (e) {
+      Logger.error('Error al eliminar conductor: $e', tag: _logTag);
+      rethrow;
+    }
+  }
+
   // ============ UTILIDADES ============
 
   String generateId() => const Uuid().v4();
