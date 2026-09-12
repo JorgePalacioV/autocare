@@ -68,6 +68,22 @@ class FirebaseService {
   bool get isAuthenticated => _auth.currentUser != null;
   String? get currentUserId => _auth.currentUser?.uid;
 
+  // ============ VALIDACIÓN DE AUTORIZACIÓN ============
+
+  /// Valida que el usuario actual sea el propietario de los datos
+  void _validateOwnership(String resourceOwnerId) {
+    final current = currentUserId;
+    if (current == null) {
+      throw FirebaseException('Usuario no autenticado', code: 'UNAUTHENTICATED');
+    }
+    if (current != resourceOwnerId) {
+      throw FirebaseException(
+        'No tienes permiso para acceder a este recurso',
+        code: 'UNAUTHORIZED',
+      );
+    }
+  }
+
   // ============ AUTENTICACIÓN ============
 
   Future<UserCredential> signUp(String email, String password, String name) async {
@@ -203,6 +219,7 @@ class FirebaseService {
 
   Future<AppUser?> getUserData(String userId) async {
     try {
+      _validateOwnership(userId);
       Logger.log('Obteniendo datos del usuario: $userId');
       final doc = await _firestore.collection('users').doc(userId).get();
       if (doc.exists) {
@@ -226,6 +243,7 @@ class FirebaseService {
 
   Future<void> updateUserData(String userId, AppUser user) async {
     try {
+      _validateOwnership(userId);
       Logger.log('Actualizando usuario: $userId');
       await _firestore.collection('users').doc(userId).update(user.toMap());
       Logger.log('✓ Usuario actualizado');
@@ -237,6 +255,7 @@ class FirebaseService {
 
   Future<void> updateUserProfile(String userId, {String? phone, String? photoUrl}) async {
     try {
+      _validateOwnership(userId);
       Logger.log('Actualizando perfil: $userId');
       final updates = <String, dynamic>{};
       if (phone != null) updates['phone'] = phone;
@@ -268,7 +287,10 @@ class FirebaseService {
     try {
       final doc = await _firestore.collection('vehicles').doc(vehicleId).get();
       if (doc.exists) {
-        return Vehicle.fromMap(doc.data() as Map<String, dynamic>);
+        final vehicle = Vehicle.fromMap(doc.data() as Map<String, dynamic>);
+        // Validar que el vehículo pertenece al usuario actual
+        _validateOwnership(vehicle.userId);
+        return vehicle;
       }
       return null;
     } catch (e) {
@@ -279,6 +301,7 @@ class FirebaseService {
 
   Future<List<Vehicle>> getUserVehicles(String userId) async {
     try {
+      _validateOwnership(userId);
       Logger.log('Obteniendo vehículos del usuario: $userId');
       final snapshot = await _firestore
           .collection('vehicles')
@@ -354,6 +377,9 @@ class FirebaseService {
 
   Future<List<Maintenance>> getVehicleMaintenances(String vehicleId) async {
     try {
+      // Validar que el vehículo pertenece al usuario actual
+      await getVehicle(vehicleId);
+
       Logger.log('Obteniendo mantenimientos del vehículo: $vehicleId');
       final snapshot = await _firestore
           .collection('maintenances')
@@ -424,6 +450,9 @@ class FirebaseService {
 
   Future<Map<String, dynamic>> getVehicleStats(String vehicleId) async {
     try {
+      // Validar que el vehículo pertenece al usuario actual
+      await getVehicle(vehicleId);
+
       Logger.log('Calculando estadísticas del vehículo: $vehicleId');
       final maintenances = await getVehicleMaintenances(vehicleId);
 
@@ -592,6 +621,7 @@ class FirebaseService {
 
   Future<List<MaintenanceSchedule>> getAllMaintenanceSchedules(String userId) async {
     try {
+      _validateOwnership(userId);
       final docs = await _firestore
           .collection('users')
           .doc(userId)
@@ -691,6 +721,7 @@ class FirebaseService {
 
   Future<String?> uploadVehiclePhoto(String userId, String vehicleId, File photoFile) async {
     try {
+      _validateOwnership(userId);
       Logger.log('Subiendo foto del vehículo: $vehicleId');
       final fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
       final ref = _storage.ref().child('vehicles/$userId/$vehicleId/$fileName');
