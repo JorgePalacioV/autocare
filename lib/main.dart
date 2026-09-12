@@ -67,6 +67,8 @@ class MyApp extends StatelessWidget {
       supportedLocales: const [
         Locale('es'),
         Locale('en'),
+        Locale('pt'),
+        Locale('fr'),
       ],
       locale: const Locale('es'),
       home: const AuthWrapper(),
