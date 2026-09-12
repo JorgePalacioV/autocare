@@ -181,14 +181,11 @@ class _MaintenanceScheduleScreenState extends State<MaintenanceScheduleScreen> {
               ),
             ),
             const SizedBox(height: 24),
-            ..._schedules.entries.map((entry) {
-              final type = entry.key;
-              final schedule = entry.value;
-
+            ...MaintenanceType.values.map((type) {
+              final schedule = _schedules[type];
               if (schedule == null) return const SizedBox.shrink();
-
               return _buildScheduleCard(type, schedule);
-            }),
+            }).toList(),
           ],
         ),
       ),

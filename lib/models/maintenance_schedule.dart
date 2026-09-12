@@ -17,11 +17,7 @@ class MaintenanceSchedule {
     this.recommendedIntervalDays,
     required this.createdAt,
     this.updatedAt,
-  }) {
-    if ((recommendedIntervalKm ?? 0) <= 0 && (recommendedIntervalDays ?? 0) <= 0) {
-      throw ArgumentError('Al menos un intervalo debe ser mayor a 0');
-    }
-  }
+  });
 
   static const Map<MaintenanceType, int?> defaultIntervalKm = {
     MaintenanceType.oil: 5000,
