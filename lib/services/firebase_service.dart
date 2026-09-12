@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:uuid/uuid.dart';
 import '../models/models.dart';
 import 'logger.dart';
@@ -27,6 +28,7 @@ class FirebaseService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
+  final GoogleSignIn _googleSignIn = GoogleSignIn();
   static const String _logTag = '[FirebaseService]';
 
   // ============ EMULADORES ============
@@ -125,6 +127,73 @@ class FirebaseService {
       Logger.log('✓ Correo de reseteo enviado');
     } on FirebaseAuthException catch (e) {
       throw FirebaseException(e.message ?? 'Error al resetear contraseña', code: e.code);
+    }
+  }
+
+  // ============ GOOGLE SIGN-IN ============
+
+  Future<UserCredential> signInWithGoogle() async {
+    try {
+      Logger.log('Iniciando sesión con Google...');
+
+      // Realizar login con Google
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+
+      if (googleUser == null) {
+        throw FirebaseException('Inicio de sesión cancelado');
+      }
+
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      final userCredential = await _auth.signInWithCredential(credential);
+      Logger.log('✓ Sesión iniciada con Google: ${userCredential.user!.uid}');
+
+      // Crear usuario en Firestore si no existe
+      await _createUserIfNotExists(userCredential.user!);
+
+      return userCredential;
+    } on FirebaseAuthException catch (e) {
+      Logger.log('✗ Error con Google Sign-In: ${e.code}');
+      throw FirebaseException(e.message ?? 'Error con Google Sign-In', code: e.code);
+    } catch (e) {
+      Logger.log('✗ Error: $e');
+      throw FirebaseException('Error al iniciar sesión con Google');
+    }
+  }
+
+  Future<void> _createUserIfNotExists(User firebaseUser) async {
+    try {
+      final userDoc = await _firestore.collection('users').doc(firebaseUser.uid).get();
+
+      if (!userDoc.exists) {
+        final appUser = AppUser(
+          id: firebaseUser.uid,
+          email: firebaseUser.email ?? '',
+          name: firebaseUser.displayName ?? 'Usuario',
+          createdAt: DateTime.now(),
+        );
+
+        await _firestore.collection('users').doc(firebaseUser.uid).set(appUser.toMap());
+        Logger.log('✓ Usuario creado en Firestore desde Google');
+      }
+    } catch (e) {
+      Logger.log('✗ Error creando usuario: $e');
+    }
+  }
+
+  Future<void> googleSignOut() async {
+    try {
+      await _googleSignIn.signOut();
+      await _auth.signOut();
+      Logger.log('✓ Sesión de Google cerrada');
+    } catch (e) {
+      Logger.log('✗ Error al cerrar sesión: $e');
+      rethrow;
     }
   }
 

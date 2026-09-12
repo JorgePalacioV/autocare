@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/firebase_service.dart';
 import '../../services/logger.dart';
+import '../../widgets/google_sign_in_button.dart';
 import 'register_screen.dart';
 import 'forgot_password_screen.dart';
 import 'test_firebase_screen.dart';
@@ -72,6 +73,27 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _handleGoogleSignIn() async {
+    try {
+      await _firebaseService.signInWithGoogle();
+      Logger.success('Google Sign-In exitoso', tag: '[LoginScreen]');
+      if (mounted) {
+        Navigator.of(context).pushReplacementNamed('/home');
+      }
+    } catch (e) {
+      Logger.error('Error Google Sign-In: $e', tag: '[LoginScreen]');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
     }
   }
 
@@ -257,7 +279,26 @@ class _LoginScreenState extends State<LoginScreen> {
                       : const Text('Iniciar Sesión'),
                 ),
               ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(child: Divider(color: Colors.grey[300])),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Text(
+                      'O continúa con',
+                      style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                    ),
+                  ),
+                  Expanded(child: Divider(color: Colors.grey[300])),
+                ],
+              ),
               const SizedBox(height: 16),
+              GoogleSignInButton(
+                onPressed: _handleGoogleSignIn,
+                label: 'Continuar con Google',
+              ),
+              const SizedBox(height: 24),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
