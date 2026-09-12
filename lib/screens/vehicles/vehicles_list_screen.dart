@@ -13,6 +13,7 @@ class VehiclesListScreen extends StatefulWidget {
 
 class _VehiclesListScreenState extends State<VehiclesListScreen> {
   final _firebaseService = FirebaseService();
+  String _searchQuery = '';
 
   @override
   Widget build(BuildContext context) {
@@ -35,73 +36,134 @@ class _VehiclesListScreenState extends State<VehiclesListScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.error, size: 48, color: Colors.red),
-                  const SizedBox(height: 16),
-                  Text('Error: ${snapshot.error}'),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () => setState(() {}),
-                    child: const Text('Reintentar'),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          final vehicles = snapshot.data ?? [];
-
-          if (vehicles.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.directions_car,
-                    size: 80,
-                    color: Colors.grey[400],
-                  ),
+                  Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
                   const SizedBox(height: 16),
                   Text(
-                    'No tienes vehículos',
+                    'Error al cargar vehículos',
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Agrega tu primer vehículo',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.grey[600],
-                        ),
+                    'Intenta de nuevo',
+                    style: TextStyle(color: Colors.grey[600]),
                   ),
                   const SizedBox(height: 24),
                   ElevatedButton.icon(
-                    onPressed: () => _navigateToAddVehicle(),
-                    icon: const Icon(Icons.add),
-                    label: const Text('Agregar Vehículo'),
+                    onPressed: () => setState(() {}),
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Reintentar'),
                   ),
                 ],
               ),
             );
           }
 
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: vehicles.length,
-            itemBuilder: (context, index) {
-              final vehicle = vehicles[index];
-              return VehicleCard(
-                vehicle: vehicle,
-                onTap: () => _navigateToDetails(vehicle),
-                onDelete: () => _deleteVehicle(vehicle),
-              );
-            },
+          final allVehicles = snapshot.data ?? [];
+          final vehicles = _filterVehicles(allVehicles);
+
+          return Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: TextField(
+                  decoration: InputDecoration(
+                    hintText: 'Buscar por marca, modelo o placa...',
+                    prefixIcon: const Icon(Icons.search),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  ),
+                  onChanged: (value) => setState(() => _searchQuery = value),
+                ),
+              ),
+              Expanded(
+                child: allVehicles.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.directions_car,
+                              size: 80,
+                              color: Colors.grey[300],
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'No tienes vehículos',
+                              style: Theme.of(context).textTheme.titleLarge,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Agrega tu primer vehículo para comenzar',
+                              style: TextStyle(color: Colors.grey[600]),
+                            ),
+                            const SizedBox(height: 24),
+                            ElevatedButton.icon(
+                              onPressed: _navigateToAddVehicle,
+                              icon: const Icon(Icons.add),
+                              label: const Text('Agregar Vehículo'),
+                            ),
+                          ],
+                        ),
+                      )
+                    : vehicles.isEmpty
+                        ? Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.search_off,
+                                  size: 64,
+                                  color: Colors.grey[400],
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'Sin resultados',
+                                  style: Theme.of(context).textTheme.titleMedium,
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'No se encontraron vehículos que coincidan',
+                                  style: TextStyle(color: Colors.grey[600]),
+                                ),
+                              ],
+                            ),
+                          )
+                        : ListView.builder(
+                            padding: const EdgeInsets.all(16),
+                            itemCount: vehicles.length,
+                            itemBuilder: (context, index) {
+                              final vehicle = vehicles[index];
+                              return VehicleCard(
+                                vehicle: vehicle,
+                                onTap: () => _navigateToDetails(vehicle),
+                                onDelete: () => _deleteVehicle(vehicle),
+                              );
+                            },
+                          ),
+              ),
+            ],
           );
         },
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _navigateToAddVehicle,
+        tooltip: 'Agregar vehículo',
         child: const Icon(Icons.add),
       ),
     );
+  }
+
+  List<Vehicle> _filterVehicles(List<Vehicle> vehicles) {
+    if (_searchQuery.isEmpty) return vehicles;
+
+    final query = _searchQuery.toLowerCase();
+    return vehicles.where((v) {
+      return v.brand.toLowerCase().contains(query) ||
+          v.model.toLowerCase().contains(query) ||
+          v.plate.toLowerCase().contains(query);
+    }).toList();
   }
 
   void _navigateToAddVehicle() {
