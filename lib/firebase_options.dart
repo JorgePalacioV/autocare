@@ -6,7 +6,7 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyBlhtfuR1UHMstJhhoVrRSjIg7lE8Q9pUI',
+    apiKey: 'AlzaSyCT-hJU-vD81Q5pxc2pn0sWvlQriSW_caQ',
     appId: '1:507830436078:android:4604dad4cb0d016fb333ff',
     messagingSenderId: '507830436078',
     projectId: 'autocare-2f41c',
