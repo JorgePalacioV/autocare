@@ -43,11 +43,9 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
+      body: ListView(
         padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+        children: [
             if (_currentVehicle.photoUrl != null && _currentVehicle.photoUrl!.isNotEmpty)
               ClipRRect(
                 borderRadius: BorderRadius.circular(12),
@@ -76,8 +74,7 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
             _buildAlertsSection(),
             const SizedBox(height: 24),
             _buildMaintenanceSection(),
-          ],
-        ),
+        ],
       ),
     );
   }
@@ -487,12 +484,16 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
               ],
             ),
           ),
-          Text(
-            status.label,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: borderColor,
+          const SizedBox(width: 12),
+          Flexible(
+            child: Text(
+              status.label,
+              textAlign: TextAlign.end,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: borderColor,
+              ),
             ),
           ),
         ],
@@ -504,24 +505,25 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        Wrap(
+          alignment: WrapAlignment.spaceBetween,
           children: [
             Text(
               'Mantenimientos',
               style: Theme.of(context).textTheme.titleLarge,
             ),
-            Row(
+            Wrap(
+              spacing: 0,
               children: [
                 TextButton.icon(
                   onPressed: _viewHistory,
-                  icon: const Icon(Icons.history),
-                  label: const Text('Historial'),
+                  icon: const Icon(Icons.history, size: 16),
+                  label: const Text('Historial', style: TextStyle(fontSize: 12)),
                 ),
                 TextButton.icon(
                   onPressed: _addMaintenance,
-                  icon: const Icon(Icons.add),
-                  label: const Text('Agregar'),
+                  icon: const Icon(Icons.add, size: 16),
+                  label: const Text('Agregar', style: TextStyle(fontSize: 12)),
                 ),
               ],
             ),
