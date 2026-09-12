@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../../services/firebase_service.dart';
 import '../../services/logger.dart';
 import '../../widgets/google_sign_in_button.dart';
+import '../../screens/home_screen.dart';
+import '../../providers/theme_provider.dart';
 import 'register_screen.dart';
 import 'forgot_password_screen.dart';
 import 'test_firebase_screen.dart';
@@ -78,12 +80,29 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _handleGoogleSignIn() async {
     try {
+      print('DEBUG: Iniciando Google Sign-In...');
       await _firebaseService.signInWithGoogle();
+      print('DEBUG: Google Sign-In completado');
       Logger.success('Google Sign-In exitoso', tag: '[LoginScreen]');
+
+      print('DEBUG: mounted=$mounted, context=${context.toString()}');
+
       if (mounted) {
-        Navigator.of(context).pushReplacementNamed('/home');
+        print('DEBUG: Intentando navegar a HomeScreen...');
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) {
+              print('DEBUG: Construyendo HomeScreen...');
+              return const HomeScreen();
+            },
+          ),
+        );
+        print('DEBUG: Navegación completada');
+      } else {
+        print('DEBUG: Widget no está mounted');
       }
     } catch (e) {
+      print('DEBUG: Error en Google Sign-In: $e');
       Logger.error('Error Google Sign-In: $e', tag: '[LoginScreen]');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

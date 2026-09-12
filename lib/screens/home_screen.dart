@@ -68,7 +68,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 await _firebaseService.signOut();
                 Logger.success('Sesión cerrada', tag: '[HomeScreen]');
                 if (mounted) {
-                  Navigator.of(context).pushReplacementNamed('/login');
+                  Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
                 }
               } catch (e) {
                 Logger.error('Error logout: $e', tag: '[HomeScreen]');
@@ -126,12 +126,10 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
+      body: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+        children: [
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
@@ -291,7 +289,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 16),
               SizedBox(
-                height: 48,
+                height: 52,
                 child: ElevatedButton.icon(
                   onPressed: _navigateToVehicles,
                   icon: const Icon(Icons.directions_car),
@@ -300,7 +298,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 12),
               SizedBox(
-                height: 48,
+                height: 52,
                 child: ElevatedButton.icon(
                   onPressed: _addVehicle,
                   icon: const Icon(Icons.add),
@@ -309,7 +307,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 12),
               SizedBox(
-                height: 48,
+                height: 52,
                 child: ElevatedButton.icon(
                   onPressed: _navigateToSchedules,
                   icon: const Icon(Icons.alarm),
@@ -318,7 +316,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 12),
               SizedBox(
-                height: 48,
+                height: 52,
                 child: ElevatedButton.icon(
                   onPressed: _navigateToReports,
                   icon: const Icon(Icons.assessment),
@@ -373,9 +371,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
               ),
-            ],
-          ),
-        ),
+        ],
       ),
     );
   }

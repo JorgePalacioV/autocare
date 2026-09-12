@@ -52,9 +52,9 @@ class _MyAppState extends State<MyApp> {
           title: 'AutoCare',
           theme: AppThemes.lightTheme,
           darkTheme: AppThemes.darkTheme,
-          themeMode: _themeProvider.currentTheme == ThemeMode.system
+          themeMode: _themeProvider.currentTheme == AppThemeMode.system
               ? ThemeMode.system
-              : (_themeProvider.currentTheme == ThemeMode.dark
+              : (_themeProvider.currentTheme == AppThemeMode.dark
                   ? ThemeMode.dark
                   : ThemeMode.light),
           localizationsDelegates: const [
@@ -69,36 +69,18 @@ class _MyAppState extends State<MyApp> {
             Locale('fr'),
           ],
           locale: const Locale('es'),
-          home: AuthWrapper(themeProvider: _themeProvider),
+          home: IntroScreen(themeProvider: _themeProvider),
           routes: {
             '/login': (context) => const LoginScreen(),
             '/register': (context) => const RegisterScreen(),
             '/forgot-password': (context) => const ForgotPasswordScreen(),
-            '/home': (context) => const HomeScreen(),
+            '/home': (context) => HomeScreen(themeProvider: _themeProvider),
           },
         );
       },
     );
   }
 }
-
-class AuthWrapper extends StatelessWidget {
-  final ThemeProvider themeProvider;
-
-  const AuthWrapper({Key? key, required this.themeProvider}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    final firebaseService = FirebaseService();
-
-    if (firebaseService.isAuthenticated) {
-      return HomeScreen(themeProvider: themeProvider);
-    } else {
-      return IntroScreen(themeProvider: themeProvider);
-    }
-  }
-}
-
 class IntroScreen extends StatefulWidget {
   final ThemeProvider themeProvider;
 

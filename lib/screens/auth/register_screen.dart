@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../services/firebase_service.dart';
 import '../../services/logger.dart';
+import '../../widgets/google_sign_in_button.dart';
+import '../../screens/home_screen.dart';
 import 'test_firebase_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -105,6 +107,27 @@ class _RegisterScreenState extends State<RegisterScreen> {
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _handleGoogleSignIn() async {
+    try {
+      await _firebaseService.signInWithGoogle();
+      Logger.success('Google Sign-In exitoso', tag: '[RegisterScreen]');
+      if (mounted) {
+        Navigator.of(context).pushReplacementNamed('/home');
+      }
+    } catch (e) {
+      Logger.error('Error Google Sign-In: $e', tag: '[RegisterScreen]');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
     }
   }
 
@@ -286,6 +309,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         )
                       : const Text('Crear Cuenta'),
                 ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(child: Divider(color: Colors.grey[300])),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Text(
+                      'O regístrate con',
+                      style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                    ),
+                  ),
+                  Expanded(child: Divider(color: Colors.grey[300])),
+                ],
+              ),
+              const SizedBox(height: 16),
+              GoogleSignInButton(
+                onPressed: _handleGoogleSignIn,
+                label: 'Registrarse con Google',
               ),
               const SizedBox(height: 16),
               Row(
