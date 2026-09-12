@@ -6,6 +6,7 @@ import 'vehicles/vehicles_list_screen.dart';
 import 'vehicles/add_vehicle_screen.dart';
 import 'profile_screen.dart';
 import 'maintenance/maintenance_schedule_screen.dart';
+import 'reports/reports_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -303,6 +304,15 @@ class _HomeScreenState extends State<HomeScreen> {
                   label: const Text('Configurar Alertas'),
                 ),
               ),
+              const SizedBox(height: 12),
+              SizedBox(
+                height: 48,
+                child: ElevatedButton.icon(
+                  onPressed: _navigateToReports,
+                  icon: const Icon(Icons.assessment),
+                  label: const Text('Generar Reportes'),
+                ),
+              ),
               const SizedBox(height: 32),
               GestureDetector(
                 onTap: _userData != null ? _editProfile : null,
@@ -444,6 +454,14 @@ class _HomeScreenState extends State<HomeScreen> {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => const MaintenanceScheduleScreen(),
+      ),
+    );
+  }
+
+  void _navigateToReports() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const ReportsScreen(),
       ),
     );
   }
